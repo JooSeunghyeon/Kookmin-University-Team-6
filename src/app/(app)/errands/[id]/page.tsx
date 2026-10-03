@@ -14,7 +14,6 @@ import { UrgentUpgradeButtons } from "@/components/errand/urgent-upgrade-buttons
 import { CancelErrandButton } from "@/components/errand/cancel-errand-button";
 import { ChatEntryButton } from "@/components/errand/chat-entry-button";
 import { InquirySection, type InquiryWithAuthor } from "@/components/errand/inquiry-section";
-import { RouteMap } from "@/components/map/route-map";
 import type {
   Application,
   CompletionProof,
@@ -158,10 +157,6 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
     errand.runner_id && ["MATCHED", "CONFIRMING", "COMPLETED"].includes(errand.status) && (isRequester || isRunner),
   );
 
-  const hasRouteCoords = Boolean(
-    errand.from_lat !== null && errand.from_lng !== null && errand.to_lat !== null && errand.to_lng !== null,
-  );
-
   const isBlinded = errand.moderation_status === "blinded";
   const canSeeBlindedBanner = isBlinded && (isRequester || profile.role === "admin");
 
@@ -203,13 +198,6 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
           <p className="font-bold text-[#3B5BFD]">{formatPoints(errand.price)}</p>
         </div>
       </section>
-
-      {hasRouteCoords && (
-        <RouteMap
-          from={{ lat: errand.from_lat as number, lng: errand.from_lng as number, label: errand.from_label ?? "출발" }}
-          to={{ lat: errand.to_lat as number, lng: errand.to_lng as number, label: errand.to_label ?? "도착" }}
-        />
-      )}
 
       <section className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm">
         <span className="text-gray-500">

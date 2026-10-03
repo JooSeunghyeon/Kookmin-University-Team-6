@@ -5,12 +5,7 @@ import { useRouter } from "next/navigation";
 import { GATHERING_CATEGORIES, MIN_GATHERING_CAPACITY, MAX_GATHERING_CAPACITY, type GatheringCategoryValue } from "@/lib/constants";
 import { FormField, inputBaseClass, primaryButtonClass } from "@/components/ui/form-field";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { CustomLocationField, EMPTY_LEG, type LegValue } from "@/components/map/place-picker";
-import type { LatLng } from "@/lib/geo";
-
-interface NewGatheringFormProps {
-  schoolCenter: LatLng;
-}
+import { CustomLocationField, EMPTY_LEG, type LegValue } from "@/components/location/place-picker";
 
 function dateToDatetimeLocalValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -23,7 +18,7 @@ function defaultMeetAt(): string {
   return dateToDatetimeLocalValue(date);
 }
 
-export function NewGatheringForm({ schoolCenter }: NewGatheringFormProps) {
+export function NewGatheringForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -125,7 +120,7 @@ export function NewGatheringForm({ schoolCenter }: NewGatheringFormProps) {
         <DateTimePicker value={meetAt} onChange={setMeetAt} />
       </FormField>
 
-      <CustomLocationField fieldLabel="장소" schoolCenter={schoolCenter} value={place} onChange={setPlace} />
+      <CustomLocationField fieldLabel="장소" value={place} onChange={setPlace} />
 
       {error && <p className="text-xs text-[#F04452]">{error}</p>}
 

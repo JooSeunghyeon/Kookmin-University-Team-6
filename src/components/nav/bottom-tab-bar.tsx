@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Map, Plus, User, Users, type LucideIcon } from "lucide-react";
+import { Home, MessageCircle, Plus, User, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/nav/notification-bell";
 import { Logo } from "@/components/ui/logo";
@@ -15,7 +15,7 @@ interface TabItem {
 
 const TABS: TabItem[] = [
   { href: "/", label: "홈", icon: Home },
-  { href: "/map", label: "지도", icon: Map },
+  { href: "/chat", label: "채팅", icon: MessageCircle },
   { href: "/gatherings", label: "모임", icon: Users },
   { href: "/me", label: "MY", icon: User },
 ];

@@ -6,7 +6,6 @@ import { gatheringCategoryLabel, GATHERING_STATUS_LABEL } from "@/lib/constants"
 import { formatKoreanDateTime } from "@/lib/time";
 import { GatheringActions } from "@/components/gathering/gathering-actions";
 import { GatheringComments, type GatheringCommentWithAuthor } from "@/components/gathering/gathering-comments";
-import { GatheringPlaceMap } from "@/components/map/gathering-place-map";
 import type { Gathering, GatheringComment, GatheringMember, PublicProfile } from "@/lib/supabase/types";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -98,10 +97,6 @@ export default async function GatheringDetailPage({ params }: PageProps<"/gather
           </span>
         </div>
       </section>
-
-      {gathering.place_lat !== null && gathering.place_lng !== null && (
-        <GatheringPlaceMap point={{ lat: gathering.place_lat, lng: gathering.place_lng }} />
-      )}
 
       <section className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
         모임장 {hostProfile?.nickname ?? "알 수 없음"}

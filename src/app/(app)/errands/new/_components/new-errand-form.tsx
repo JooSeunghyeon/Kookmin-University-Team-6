@@ -21,16 +21,14 @@ import {
 import { formatPoints } from "@/lib/utils";
 import { FormField, inputBaseClass, primaryButtonClass } from "@/components/ui/form-field";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { CampusPlaceField, CustomLocationField, EMPTY_LEG, type LegValue } from "@/components/map/place-picker";
+import { CampusPlaceField, CustomLocationField, EMPTY_LEG, type LegValue } from "@/components/location/place-picker";
 import type { CampusPlace } from "@/lib/supabase/types";
 import type { AiAssistResult } from "@/lib/ai/assist";
-import type { LatLng } from "@/lib/geo";
 import { PaymentConfirmModal } from "./payment-confirm-modal";
 
 interface NewErrandFormProps {
   places: CampusPlace[];
   pointBalance: number;
-  schoolCenter: LatLng;
 }
 
 const ONLINE_LEG: LegValue = { placeId: null, label: "온라인", lat: null, lng: null };
@@ -46,7 +44,7 @@ function defaultDesiredAt(): string {
   return dateToDatetimeLocalValue(date);
 }
 
-export function NewErrandForm({ places, pointBalance, schoolCenter }: NewErrandFormProps) {
+export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
   const router = useRouter();
   const [rawInput, setRawInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -278,8 +276,8 @@ export function NewErrandForm({ places, pointBalance, schoolCenter }: NewErrandF
 
       {locationType === "custom" && (
         <div className="flex flex-col gap-3">
-          <CustomLocationField fieldLabel="출발지" schoolCenter={schoolCenter} value={fromLeg} onChange={setFromLeg} />
-          <CustomLocationField fieldLabel="도착지" schoolCenter={schoolCenter} value={toLeg} onChange={setToLeg} />
+          <CustomLocationField fieldLabel="출발지" value={fromLeg} onChange={setFromLeg} />
+          <CustomLocationField fieldLabel="도착지" value={toLeg} onChange={setToLeg} />
         </div>
       )}
 
