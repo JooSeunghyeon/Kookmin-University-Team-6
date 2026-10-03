@@ -56,14 +56,21 @@ function findCategory(text: string): ErrandCategory {
   return "etc";
 }
 
+/**
+ * 텍스트에서 언급된 장소를 찾아 "본문에 먼저 나온 순서대로" 반환한다.
+ * places 배열 순서(DB 조회 순서)로 반환하면 "공학관에서 정문까지"처럼 출발지가 먼저 쓰여도
+ * 배열상 정문이 앞에 있으면 출발/도착이 뒤바뀐다. indexOf로 실제 등장 위치를 기준으로 정렬한다.
+ */
 function findMentionedPlaces(text: string, places: CampusPlace[]): CampusPlace[] {
-  const matched: CampusPlace[] = [];
+  const matches: Array<{ place: CampusPlace; index: number }> = [];
   for (const place of places) {
-    if (text.includes(place.name) && !matched.some((item) => item.id === place.id)) {
-      matched.push(place);
+    const index = text.indexOf(place.name);
+    if (index !== -1) {
+      matches.push({ place, index });
     }
   }
-  return matched;
+  matches.sort((a, b) => a.index - b.index);
+  return matches.map((match) => match.place);
 }
 
 function isLunchPeak(desiredAt: string): boolean {
