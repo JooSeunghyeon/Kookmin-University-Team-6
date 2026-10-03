@@ -1,2 +1,2 @@
-# Kookmin-University-Team-5
+# Kookmin-University-Team-6
 Kookmin AI Challenge 2026
