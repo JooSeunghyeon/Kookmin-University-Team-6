@@ -3,10 +3,11 @@ import { ZodError } from "zod";
 import { createErrandSchema } from "@/lib/validation/errand";
 import { requireApiUser } from "@/lib/api/require-user";
 import { rpcErrorResponse, unauthorizedResponse } from "@/lib/api/errors";
-import { containsBannedWord } from "@/lib/moderation/basic-filter";
+import { moderateText } from "@/lib/ai/moderate";
+import { AI_VERDICT } from "@/lib/constants";
 
-// NOTE: 4단계(ai)에서 moderate()의 2차 Claude 검열을 이 경로에 추가로 연결한다.
-// 지금은 1차 규칙 필터만 적용한다.
+const MODERATION_DELIMITER = "\n---BODY---\n";
+
 export async function POST(request: Request) {
   const { supabase, user } = await requireApiUser();
   if (!user) return unauthorizedResponse();
@@ -21,14 +22,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "요청을 처리할 수 없어요." }, { status: 400 });
   }
 
-  if (containsBannedWord(input.title) || containsBannedWord(input.body)) {
-    return NextResponse.json({ error: "부적절한 표현이 포함되어 있어요." }, { status: 400 });
+  // 제목·본문을 한 번에 검열해 Claude 호출을 1회로 줄인다(직렬 8초 타임아웃 2회가 쌓이면
+  // 서버리스 함수 전체 제한 시간을 넘길 수 있다). 구분자로 합쳤다가 결과를 다시 나눈다.
+  const moderation = await moderateText({
+    text: `${input.title}${MODERATION_DELIMITER}${input.body}`,
+    targetType: "errand",
+    userId: user.id,
+    supabase,
+  });
+
+  if (moderation.verdict === AI_VERDICT.BLOCK) {
+    return NextResponse.json({ error: moderation.reason || "부적절한 내용이 포함되어 있어요." }, { status: 400 });
   }
+
+  const [maskedTitle, maskedBody] = moderation.maskedText.split(MODERATION_DELIMITER);
 
   const { data, error } = await supabase.rpc("fn_create_errand", {
     p_requester_id: user.id,
-    p_title: input.title,
-    p_body: input.body,
+    p_title: maskedTitle ?? input.title,
+    p_body: maskedBody ?? input.body,
     p_raw_input: input.rawInput ?? input.body,
     p_category: input.category,
     p_from_place_id: input.fromPlaceId ?? null,

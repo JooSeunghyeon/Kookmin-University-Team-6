@@ -6,6 +6,7 @@ import { ERRAND_CATEGORIES, URGENT_LEVEL_FEE, MIN_ERRAND_PRICE, type ErrandCateg
 import { formatPoints } from "@/lib/utils";
 import { FormField, inputBaseClass, primaryButtonClass } from "@/components/ui/form-field";
 import type { CampusPlace } from "@/lib/supabase/types";
+import type { AiAssistResult } from "@/lib/ai/assist";
 import { PaymentConfirmModal } from "./payment-confirm-modal";
 
 interface NewErrandFormProps {
@@ -13,15 +14,24 @@ interface NewErrandFormProps {
   pointBalance: number;
 }
 
-function defaultDesiredAt(): string {
-  const date = new Date(Date.now() + 60 * 60 * 1000);
-  date.setSeconds(0, 0);
+function dateToDatetimeLocalValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function defaultDesiredAt(): string {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  date.setSeconds(0, 0);
+  return dateToDatetimeLocalValue(date);
+}
+
 export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
   const router = useRouter();
+  const [rawInput, setRawInput] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiApplied, setAiApplied] = useState<AiAssistResult | null>(null);
+
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<ErrandCategory>(ERRAND_CATEGORIES[0].value);
@@ -36,6 +46,48 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
 
   const fromPlace = useMemo(() => places.find((place) => place.id === fromPlaceId), [places, fromPlaceId]);
   const toPlace = useMemo(() => places.find((place) => place.id === toPlaceId), [places, toPlaceId]);
+
+  async function handleAiAssist() {
+    if (rawInput.trim().length < 2) {
+      setAiError("내용을 2자 이상 입력해 주세요.");
+      return;
+    }
+
+    setIsAiLoading(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch("/api/ai/assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawInput }),
+      });
+      const responseBody = await response.json();
+
+      if (!response.ok) {
+        setAiError(responseBody.error ?? "AI 정리에 실패했어요.");
+        return;
+      }
+
+      const result = responseBody.result as AiAssistResult;
+      setTitle(result.title);
+      setBody(result.body);
+      setCategory(result.category);
+      setDesiredAt(dateToDatetimeLocalValue(new Date(result.desiredAt)));
+      setPrice(String(result.suggestedPrice));
+
+      const matchedFrom = places.find((place) => place.name === result.fromLabel);
+      const matchedTo = places.find((place) => place.name === result.toLabel);
+      if (matchedFrom) setFromPlaceId(matchedFrom.id);
+      if (matchedTo) setToPlaceId(matchedTo.id);
+
+      setAiApplied(result);
+    } catch {
+      setAiError("AI 정리에 실패했어요. 직접 입력해 주세요.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  }
 
   const priceNumber = Number(price) || 0;
   const urgentFee = urgentLevel === 0 ? 0 : URGENT_LEVEL_FEE[urgentLevel];
@@ -61,6 +113,7 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
       body: JSON.stringify({
         title,
         body,
+        rawInput: rawInput.trim() || undefined,
         category,
         fromPlaceId: fromPlace.id,
         fromLat: fromPlace.lat,
@@ -72,6 +125,7 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
         toLabel: toPlace.name,
         desiredAt: new Date(desiredAt).toISOString(),
         price: priceNumber,
+        aiSuggestedPrice: aiApplied?.suggestedPrice,
         urgentLevel,
       }),
     });
@@ -89,6 +143,35 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
 
   return (
     <div className="flex flex-col gap-4 pb-6">
+      <FormField label="어떤 심부름인가요? (자유롭게 적으면 AI가 정리해 드려요)">
+        <textarea
+          className="h-20 rounded-xl border border-gray-200 p-3 text-base outline-none focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20"
+          value={rawInput}
+          onChange={(event) => setRawInput(event.target.value)}
+          placeholder="예: 지금 공학관에서 정문까지 과제 출력물 좀 가져다주실 분"
+          maxLength={1000}
+        />
+      </FormField>
+      <button
+        type="button"
+        onClick={handleAiAssist}
+        disabled={isAiLoading}
+        className="btn-h w-full rounded-xl bg-[#8B5CF6] text-base font-semibold text-white transition disabled:opacity-40"
+      >
+        {isAiLoading ? "AI가 정리하는 중..." : "✦ AI로 정리하기"}
+      </button>
+      {aiError && <p className="text-xs text-[#F04452]">{aiError}</p>}
+      {aiApplied && (
+        <div className="rounded-xl bg-[#8B5CF6]/10 px-4 py-3 text-xs text-[#8B5CF6]">
+          <p className="mb-1 font-semibold">✦ AI 추천 결과를 적용했어요</p>
+          <p>{aiApplied.reasoning}</p>
+          <p>
+            추천 범위 {formatPoints(aiApplied.priceRangeMin)} ~ {formatPoints(aiApplied.priceRangeMax)}
+          </p>
+          {aiApplied.urgentRecommended && <p className="mt-1 font-semibold text-[#F04452]">⚡ 긴급 옵션을 추천해요</p>}
+        </div>
+      )}
+
       <FormField label="제목">
         <input
           className={inputBaseClass}

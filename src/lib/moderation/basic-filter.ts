@@ -17,6 +17,13 @@ const BANNED_SUBSTRINGS = [
 
 const BANNED_JAMO_PATTERN = /ㅅㅂ|ㅄ|ㅈㄹ/;
 
+// 학업 부정행위(대리출석·대리시험·과제 대행 등) 요청에 흔히 쓰이는 한글·로마자 표현.
+// AI 검열(moderate.ts) 2차 판정 이전에 명백한 경우를 빠르게 걸러내기 위한 1차 규칙이다.
+const ACADEMIC_DISHONESTY_SUBSTRINGS = [
+  "대리출석", "대리시험", "대리응시", "과제대행", "출석대리", "시험대리",
+  "daeri", "chulseok", "attendanceproxy", "examproxy", "assignmenthelp", "takemyexam",
+];
+
 function normalize(text: string): string {
   return text.replace(SEPARATOR_PATTERN, "").toLowerCase();
 }
@@ -32,4 +39,9 @@ function hasBannedJamo(text: string): boolean {
 export function containsBannedWord(text: string): boolean {
   const normalized = normalize(text);
   return hasBannedSubstring(normalized) || hasBannedJamo(text);
+}
+
+export function containsAcademicDishonestyKeyword(text: string): boolean {
+  const normalized = normalize(text);
+  return ACADEMIC_DISHONESTY_SUBSTRINGS.some((word) => normalized.includes(word));
 }

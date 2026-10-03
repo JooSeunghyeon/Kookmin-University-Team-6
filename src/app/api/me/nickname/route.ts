@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { requireApiUser } from "@/lib/api/require-user";
 import { rpcErrorResponse, unauthorizedResponse } from "@/lib/api/errors";
-import { containsBannedWord } from "@/lib/moderation/basic-filter";
+import { moderateText } from "@/lib/ai/moderate";
+import { AI_VERDICT } from "@/lib/constants";
 
 const nicknameSchema = z.object({
   nickname: z.string().min(2, "닉네임을 2자 이상 입력해 주세요.").max(20),
@@ -22,13 +23,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "요청을 처리할 수 없어요." }, { status: 400 });
   }
 
-  if (containsBannedWord(input.nickname)) {
+  const moderation = await moderateText({
+    text: input.nickname,
+    targetType: "nickname",
+    userId: user.id,
+    supabase,
+  });
+  if (moderation.verdict === AI_VERDICT.BLOCK) {
     return NextResponse.json({ error: "사용할 수 없는 닉네임이에요." }, { status: 400 });
   }
 
   const { data, error } = await supabase.rpc("fn_change_nickname", {
     p_user_id: user.id,
-    p_new_nickname: input.nickname,
+    p_new_nickname: moderation.maskedText,
   });
 
   if (error || !data) {

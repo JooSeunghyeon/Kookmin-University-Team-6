@@ -53,3 +53,7 @@ export const urgentUpgradeSchema = z.object({
 export const cancelErrandSchema = z.object({
   reason: z.string().max(300).optional(),
 });
+
+export const aiAssistSchema = z.object({
+  rawInput: z.string().min(2, "내용을 2자 이상 입력해 주세요.").max(1000),
+});

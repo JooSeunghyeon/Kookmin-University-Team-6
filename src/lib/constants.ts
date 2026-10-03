@@ -134,6 +134,12 @@ export const SCHOOL_SEED = [
 export const CLAUDE_TIMEOUT_MS = 8000;
 export const CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
 
+export const AI_PRICE_DISTANCE_UNIT_METERS = 100;
+export const AI_PRICE_DISTANCE_INCREMENT = 100;
+export const AI_LUNCH_PEAK_HOURS: readonly [number, number] = [11, 14];
+export const AI_LUNCH_PEAK_SURCHARGE = 300;
+export const AI_PRICE_RANGE_MARGIN = 500;
+
 export const POINT_TRANSACTION_LABEL: Record<string, string> = {
   CHARGE: "충전",
   ESCROW_HOLD: "의뢰 등록(보관)",

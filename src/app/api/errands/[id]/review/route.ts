@@ -3,7 +3,8 @@ import { ZodError } from "zod";
 import { reviewSchema } from "@/lib/validation/errand";
 import { requireApiUser } from "@/lib/api/require-user";
 import { rpcErrorResponse, unauthorizedResponse } from "@/lib/api/errors";
-import { containsBannedWord } from "@/lib/moderation/basic-filter";
+import { moderateText } from "@/lib/ai/moderate";
+import { AI_VERDICT } from "@/lib/constants";
 
 export async function POST(request: Request, { params }: RouteContext<"/api/errands/[id]/review">) {
   const { id } = await params;
@@ -20,8 +21,18 @@ export async function POST(request: Request, { params }: RouteContext<"/api/erra
     return NextResponse.json({ error: "요청을 처리할 수 없어요." }, { status: 400 });
   }
 
-  if (input.comment && containsBannedWord(input.comment)) {
-    return NextResponse.json({ error: "부적절한 표현이 포함되어 있어요." }, { status: 400 });
+  let maskedComment = input.comment ?? null;
+  if (input.comment) {
+    const moderation = await moderateText({
+      text: input.comment,
+      targetType: "review",
+      userId: user.id,
+      supabase,
+    });
+    if (moderation.verdict === AI_VERDICT.BLOCK) {
+      return NextResponse.json({ error: moderation.reason || "부적절한 표현이 포함되어 있어요." }, { status: 400 });
+    }
+    maskedComment = moderation.maskedText;
   }
 
   const { data, error } = await supabase.rpc("fn_write_review", {
@@ -29,7 +40,7 @@ export async function POST(request: Request, { params }: RouteContext<"/api/erra
     p_reviewer_id: user.id,
     p_rating: input.rating,
     p_tags: input.tags ?? [],
-    p_comment: input.comment ?? null,
+    p_comment: maskedComment,
   });
 
   if (error || !data) {
