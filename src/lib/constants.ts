@@ -3,10 +3,14 @@ export const SELECT_WINDOW_MS = 3 * 60 * 60 * 1000;
 export const CONFIRM_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export const PLATFORM_FEE_RATE = 0.1;
-export const RUNNER_PAYOUT_RATE = 0.9;
+// 수수료는 10%지만 고액 의뢰에서 과도해지지 않도록 1,000P에서 상한을 둔다.
+export const PLATFORM_FEE_MAX = 1000;
 
 export const SIGNUP_BONUS_POINTS = 10000;
 export const MIN_ERRAND_PRICE = 1000;
+// 온라인(비대면) 의뢰는 이동이 없어 최소 사례금을 낮게 받는다.
+export const MIN_ERRAND_PRICE_ONLINE = 500;
+export const MAX_ERRAND_PRICE = 100000;
 
 export const URGENT_LEVEL_FEE: Record<1 | 2, number> = {
   1: 100,
@@ -27,6 +31,18 @@ export const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
   custom: "직접 입력",
   online: "온라인(비대면)",
 };
+
+export function minErrandPrice(locationType: LocationType): number {
+  return locationType === "online" ? MIN_ERRAND_PRICE_ONLINE : MIN_ERRAND_PRICE;
+}
+
+export function calculatePlatformFee(price: number): number {
+  return Math.min(Math.floor(price * PLATFORM_FEE_RATE), PLATFORM_FEE_MAX);
+}
+
+export function calculateRunnerPayout(price: number): number {
+  return price - calculatePlatformFee(price);
+}
 
 export const GATHERING_CATEGORIES = [
   { value: "study", label: "스터디" },

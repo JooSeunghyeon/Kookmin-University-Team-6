@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { ERRAND_CATEGORIES, LOCATION_TYPES } from "@/lib/constants";
+import {
+  ERRAND_CATEGORIES,
+  LOCATION_TYPES,
+  MAX_ERRAND_PRICE,
+  MIN_ERRAND_PRICE,
+  MIN_ERRAND_PRICE_ONLINE,
+  minErrandPrice,
+} from "@/lib/constants";
 
 const CATEGORY_VALUES = ERRAND_CATEGORIES.map((category) => category.value) as [string, ...string[]];
 
@@ -20,7 +27,11 @@ export const createErrandSchema = z.object({
   toLabel: z.string().min(1, "도착지를 선택해 주세요."),
   toDetail: z.string().max(200).optional(),
   desiredAt: z.string().min(1, "희망 시각을 선택해 주세요."),
-  price: z.number().int().min(1000, "금액은 1,000P 이상이어야 해요."),
+  price: z
+    .number()
+    .int()
+    .min(MIN_ERRAND_PRICE_ONLINE, `금액은 ${MIN_ERRAND_PRICE_ONLINE.toLocaleString("ko-KR")}P 이상이어야 해요.`)
+    .max(MAX_ERRAND_PRICE, `금액은 ${MAX_ERRAND_PRICE.toLocaleString("ko-KR")}P 이하여야 해요.`),
   aiSuggestedPrice: z.number().int().optional(),
   urgentLevel: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(0),
   imageUrl: z.string().url().optional(),
@@ -30,6 +41,12 @@ export const createErrandSchema = z.object({
     (input.fromLat !== null && input.fromLat !== undefined && input.fromLng !== null && input.fromLng !== undefined &&
       input.toLat !== null && input.toLat !== undefined && input.toLng !== null && input.toLng !== undefined),
   { message: "캠퍼스 장소를 선택하면 좌표가 필요해요." },
+).refine(
+  (input) => input.price >= minErrandPrice(input.locationType),
+  {
+    error: `온라인 의뢰는 ${MIN_ERRAND_PRICE_ONLINE.toLocaleString("ko-KR")}P, 그 외는 ${MIN_ERRAND_PRICE.toLocaleString("ko-KR")}P 이상으로 입력해 주세요.`,
+    path: ["price"],
+  },
 );
 
 export type CreateErrandInput = z.infer<typeof createErrandSchema>;

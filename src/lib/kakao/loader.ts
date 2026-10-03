@@ -26,12 +26,18 @@ export function loadKakaoMaps(): Promise<typeof kakao> {
     const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
     const script = existingScript ?? document.createElement("script");
     script.id = SCRIPT_ID;
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=clusterer`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=clusterer`;
     script.async = true;
     script.addEventListener("load", () => window.kakao.maps.load(() => resolve(window.kakao)));
+    // 스크립트 로드 실패는 대부분 카카오 개발자 콘솔에 현재 도메인이 등록되지 않아
+    // 401(domain mismatched)이 떨어지는 경우다. 원인을 바로 알 수 있게 도메인을 같이 보여준다.
     script.addEventListener("error", () => {
       loaderPromise = null;
-      reject(new Error("카카오맵 스크립트를 불러오지 못했어요. 네트워크 상태를 확인해 주세요."));
+      reject(
+        new Error(
+          `카카오맵을 불러오지 못했어요. 카카오 개발자 콘솔 > 플랫폼 > Web에 ${window.location.origin} 을 등록해 주세요.`,
+        ),
+      );
     });
     if (!existingScript) document.head.appendChild(script);
   });

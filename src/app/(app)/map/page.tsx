@@ -16,7 +16,6 @@ export default async function MapPage() {
 
   return (
     <main className="flex flex-col gap-3 pt-4">
-      <h1 className="px-5 text-lg font-bold text-gray-900">지도에서 찾기</h1>
       <ErrandClusterMap errands={errands ?? []} />
     </main>
   );

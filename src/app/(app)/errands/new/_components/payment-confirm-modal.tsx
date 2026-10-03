@@ -1,4 +1,10 @@
 import { formatPoints } from "@/lib/utils";
+import {
+  PLATFORM_FEE_MAX,
+  PLATFORM_FEE_RATE,
+  calculatePlatformFee,
+  calculateRunnerPayout,
+} from "@/lib/constants";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form-field";
 
 interface PaymentConfirmModalProps {
@@ -24,13 +30,15 @@ export function PaymentConfirmModal({
   onCancel,
   onConfirm,
 }: PaymentConfirmModalProps) {
+  const platformFee = calculatePlatformFee(price);
+  const runnerPayout = calculateRunnerPayout(price);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5" onClick={onCancel}>
       <div
         className="w-full max-w-sm rounded-2xl bg-white p-5"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-gray-900">결제 확인</h2>
+        <h2 className="text-lg font-bold text-gray-900">정산 확인</h2>
         <p className="mt-1 text-sm text-gray-500">{title}</p>
         <p className="mt-1 text-xs text-gray-400">{fromLabel} → {toLabel}</p>
 
@@ -51,8 +59,23 @@ export function PaymentConfirmModal({
           </div>
         </div>
 
+        <div className="mt-2 flex flex-col gap-1.5 rounded-xl border border-dashed border-gray-200 p-3 text-sm">
+          <p className="text-xs font-semibold text-gray-500">완료 후 정산</p>
+          <div className="flex justify-between text-gray-700">
+            <span>수행자 수령액</span>
+            <span className="font-semibold">{formatPoints(runnerPayout)}</span>
+          </div>
+          <div className="flex justify-between text-gray-400">
+            <span>
+              플랫폼 수수료 {Math.round(PLATFORM_FEE_RATE * 100)}%
+              {platformFee >= PLATFORM_FEE_MAX && ` (상한 ${formatPoints(PLATFORM_FEE_MAX)})`}
+            </span>
+            <span>-{formatPoints(platformFee)}</span>
+          </div>
+        </div>
+
         <p className="mt-3 text-xs text-gray-400">
-          결제한 포인트는 수행자가 선택될 때까지 보관되며, 완료 확인 후 지급돼요.
+          결제한 포인트는 수행자가 선택될 때까지 보관되며, 완료 확인 후 수수료를 뺀 금액이 수행자에게 지급돼요.
         </p>
 
         <div className="mt-4 flex gap-2">

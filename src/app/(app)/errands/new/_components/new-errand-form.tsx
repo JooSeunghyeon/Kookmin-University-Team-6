@@ -7,8 +7,14 @@ import {
   ERRAND_CATEGORIES,
   URGENT_LEVEL_FEE,
   MIN_ERRAND_PRICE,
+  MAX_ERRAND_PRICE,
+  PLATFORM_FEE_MAX,
+  PLATFORM_FEE_RATE,
   LOCATION_TYPES,
   LOCATION_TYPE_LABEL,
+  calculatePlatformFee,
+  calculateRunnerPayout,
+  minErrandPrice,
   type ErrandCategory,
   type LocationType,
 } from "@/lib/constants";
@@ -113,13 +119,17 @@ export function NewErrandForm({ places, pointBalance, schoolCenter }: NewErrandF
   const priceNumber = Number(price) || 0;
   const urgentFee = urgentLevel === 0 ? 0 : URGENT_LEVEL_FEE[urgentLevel];
   const totalCost = priceNumber + urgentFee;
+  const minPrice = minErrandPrice(locationType);
+  const platformFee = calculatePlatformFee(priceNumber);
+  const runnerPayout = calculateRunnerPayout(priceNumber);
 
   const isFormValid =
     title.trim().length >= 2 &&
     body.trim().length >= 5 &&
     effectiveFromLeg.label.trim().length >= 1 &&
     effectiveToLeg.label.trim().length >= 1 &&
-    priceNumber >= MIN_ERRAND_PRICE &&
+    priceNumber >= minPrice &&
+    priceNumber <= MAX_ERRAND_PRICE &&
     totalCost <= pointBalance;
 
   async function handleConfirmSubmit() {
@@ -290,9 +300,20 @@ export function NewErrandForm({ places, pointBalance, schoolCenter }: NewErrandF
           className={inputBaseClass}
           value={price}
           onChange={(event) => setPrice(event.target.value)}
-          min={MIN_ERRAND_PRICE}
+          min={minPrice}
+          max={MAX_ERRAND_PRICE}
           step={100}
         />
+        <span className="text-xs text-gray-400">
+          한도 {formatPoints(minPrice)} ~ {formatPoints(MAX_ERRAND_PRICE)}
+          {locationType === "online" && " · 온라인 의뢰는 최소 금액이 낮아요"} · 보유 {formatPoints(pointBalance)}
+        </span>
+        {priceNumber > 0 && priceNumber < minPrice && (
+          <span className="text-xs text-[#F04452]">{formatPoints(minPrice)} 이상으로 입력해 주세요.</span>
+        )}
+        {priceNumber > MAX_ERRAND_PRICE && (
+          <span className="text-xs text-[#F04452]">{formatPoints(MAX_ERRAND_PRICE)} 이하로 입력해 주세요.</span>
+        )}
       </FormField>
 
       <FormField label="긴급 옵션">
@@ -316,9 +337,32 @@ export function NewErrandForm({ places, pointBalance, schoolCenter }: NewErrandF
 
       {error && <p className="text-xs text-[#F04452]">{error}</p>}
 
-      <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
-        <span className="text-gray-500">총 결제 금액</span>
-        <span className="font-bold text-[#3B5BFD]">{formatPoints(totalCost)}</span>
+      <div className="flex flex-col gap-1.5 rounded-xl bg-gray-50 px-4 py-3 text-sm">
+        <div className="flex justify-between text-gray-500">
+          <span>사례금</span>
+          <span>{formatPoints(priceNumber)}</span>
+        </div>
+        {urgentFee > 0 && (
+          <div className="flex justify-between text-[#F04452]">
+            <span>긴급 옵션</span>
+            <span>+{formatPoints(urgentFee)}</span>
+          </div>
+        )}
+        <div className="flex justify-between border-t border-gray-200 pt-1.5 font-bold text-gray-900">
+          <span>총 결제 금액</span>
+          <span className="text-[#3B5BFD]">{formatPoints(totalCost)}</span>
+        </div>
+        <div className="mt-1 flex justify-between border-t border-dashed border-gray-200 pt-1.5 text-gray-500">
+          <span>수행자 수령액</span>
+          <span className="font-semibold text-gray-700">{formatPoints(runnerPayout)}</span>
+        </div>
+        <div className="flex justify-between text-gray-400">
+          <span>
+            플랫폼 수수료 {Math.round(PLATFORM_FEE_RATE * 100)}%
+            {platformFee >= PLATFORM_FEE_MAX && ` (상한 ${formatPoints(PLATFORM_FEE_MAX)})`}
+          </span>
+          <span>-{formatPoints(platformFee)}</span>
+        </div>
       </div>
       {totalCost > pointBalance && (
         <p className="text-xs text-[#F04452]">보유 포인트({formatPoints(pointBalance)})가 부족해요.</p>
