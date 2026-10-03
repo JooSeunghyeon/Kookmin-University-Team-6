@@ -41,9 +41,16 @@ export function formatCountdown(ms: number): string {
   return `${seconds}초`;
 }
 
+const KST_TIME_ZONE = "Asia/Seoul";
+
+/**
+ * KST(UTC+9) 기준으로 날짜·시각을 표시한다. 서버 렌더링 환경(Vercel)의 기본 시간대는 UTC이므로
+ * timeZone을 명시하지 않으면 "ko-KR" 로케일이어도 시각 자체가 9시간 어긋나게 표시된다.
+ */
 export function formatKoreanDateTime(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleString("ko-KR", {
+    timeZone: KST_TIME_ZONE,
     month: "long",
     day: "numeric",
     hour: "2-digit",
