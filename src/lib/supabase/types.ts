@@ -22,6 +22,42 @@ export interface CampusPlace {
   created_at: string;
 }
 
+export type GatheringCategory = "study" | "sports" | "hobby" | "etc";
+export type GatheringStatus = "OPEN" | "CLOSED" | "CANCELLED";
+
+export interface Gathering {
+  id: string;
+  school_id: string;
+  host_id: string;
+  title: string;
+  description: string;
+  category: GatheringCategory;
+  capacity: number;
+  meet_at: string | null;
+  place_label: string | null;
+  place_lat: number | null;
+  place_lng: number | null;
+  status: GatheringStatus;
+  member_count: number;
+  moderation_status: string;
+  created_at: string;
+}
+
+export interface GatheringMember {
+  id: string;
+  gathering_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface GatheringComment {
+  id: string;
+  gathering_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+}
+
 export interface AppUser {
   id: string;
   school_id: string;
@@ -79,6 +115,7 @@ export interface Errand {
   selected_application_id: string | null;
   confirm_method: string | null;
   moderation_status: string;
+  location_type: "campus" | "custom" | "online";
   applicant_count: number;
   view_count: number;
   completed_at: string | null;

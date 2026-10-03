@@ -44,13 +44,13 @@ export async function POST(request: Request) {
     p_raw_input: input.rawInput ?? input.body,
     p_category: input.category,
     p_from_place_id: input.fromPlaceId ?? null,
-    p_from_lat: input.fromLat,
-    p_from_lng: input.fromLng,
+    p_from_lat: input.fromLat ?? null,
+    p_from_lng: input.fromLng ?? null,
     p_from_label: input.fromLabel,
     p_from_detail: input.fromDetail ?? null,
     p_to_place_id: input.toPlaceId ?? null,
-    p_to_lat: input.toLat,
-    p_to_lng: input.toLng,
+    p_to_lat: input.toLat ?? null,
+    p_to_lng: input.toLng ?? null,
     p_to_label: input.toLabel,
     p_to_detail: input.toDetail ?? null,
     p_desired_at: input.desiredAt,
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
     p_ai_suggested_price: input.aiSuggestedPrice ?? null,
     p_urgent_level: input.urgentLevel,
     p_image_url: input.imageUrl ?? null,
+    p_location_type: input.locationType,
   });
 
   if (error || !data) {

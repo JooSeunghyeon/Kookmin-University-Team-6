@@ -14,6 +14,7 @@ import { UrgentUpgradeButtons } from "@/components/errand/urgent-upgrade-buttons
 import { CancelErrandButton } from "@/components/errand/cancel-errand-button";
 import { ChatEntryButton } from "@/components/errand/chat-entry-button";
 import { InquirySection, type InquiryWithAuthor } from "@/components/errand/inquiry-section";
+import { RouteMap } from "@/components/map/route-map";
 import type {
   Application,
   CompletionProof,
@@ -23,15 +24,104 @@ import type {
   Review,
 } from "@/lib/supabase/types";
 
-async function fetchProfiles(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  ids: string[],
-): Promise<Map<string, PublicProfile>> {
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+async function fetchProfiles(supabase: Supabase, ids: string[]): Promise<Map<string, PublicProfile>> {
   const uniqueIds = Array.from(new Set(ids));
   if (uniqueIds.length === 0) return new Map();
 
   const { data } = await supabase.from("profiles").select("*").in("id", uniqueIds).returns<PublicProfile[]>();
   return new Map((data ?? []).map((row) => [row.id, row]));
+}
+
+interface ApplicationsBranchResult {
+  applicationsWithProfiles: ApplicationWithProfile[];
+  myApplication: Application | null;
+}
+
+/** 요청자면 지원자 목록 + 프로필을, 그 외에는 내 지원 여부를 가져온다(두 쿼리는 상호 배타적). */
+async function fetchApplicationsBranch(
+  supabase: Supabase,
+  errandId: string,
+  errandStatus: string,
+  isRequester: boolean,
+  myUserId: string,
+): Promise<ApplicationsBranchResult> {
+  if (isRequester && ["RECRUITING", "SELECTING"].includes(errandStatus)) {
+    const { data: applications } = await supabase
+      .from("applications")
+      .select("*")
+      .eq("errand_id", errandId)
+      .eq("status", "APPLIED")
+      .order("created_at", { ascending: true })
+      .returns<Application[]>();
+
+    const applicantProfiles = await fetchProfiles(
+      supabase,
+      (applications ?? []).map((application) => application.applicant_id),
+    );
+    const applicationsWithProfiles = (applications ?? []).map((application) => ({
+      ...application,
+      profile: applicantProfiles.get(application.applicant_id) ?? null,
+    }));
+    return { applicationsWithProfiles, myApplication: null };
+  }
+
+  if (!isRequester) {
+    const { data } = await supabase
+      .from("applications")
+      .select("*")
+      .eq("errand_id", errandId)
+      .eq("applicant_id", myUserId)
+      .maybeSingle<Application>();
+    return { applicationsWithProfiles: [], myApplication: data };
+  }
+
+  return { applicationsWithProfiles: [], myApplication: null };
+}
+
+async function fetchCompletionProof(
+  supabase: Supabase,
+  errandId: string,
+  errandStatus: string,
+): Promise<CompletionProof | null> {
+  if (!["CONFIRMING", "COMPLETED"].includes(errandStatus)) return null;
+  const { data } = await supabase
+    .from("completion_proofs")
+    .select("*")
+    .eq("errand_id", errandId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<CompletionProof>();
+  return data;
+}
+
+async function fetchExistingReview(
+  supabase: Supabase,
+  errandId: string,
+  errandStatus: string,
+): Promise<Review | null> {
+  if (!["CONFIRMING", "COMPLETED"].includes(errandStatus)) return null;
+  const { data } = await supabase.from("reviews").select("*").eq("errand_id", errandId).maybeSingle<Review>();
+  return data;
+}
+
+async function fetchInquiries(supabase: Supabase, errandId: string): Promise<InquiryWithAuthor[]> {
+  const { data: inquiryRows } = await supabase
+    .from("inquiries_feed")
+    .select("*")
+    .eq("errand_id", errandId)
+    .order("created_at", { ascending: true })
+    .returns<InquiryFeedRow[]>();
+
+  const inquiryAuthorProfiles = await fetchProfiles(
+    supabase,
+    (inquiryRows ?? []).map((inquiry) => inquiry.author_id),
+  );
+  return (inquiryRows ?? []).map((inquiry) => ({
+    ...inquiry,
+    authorNickname: inquiryAuthorProfiles.get(inquiry.author_id)?.nickname ?? null,
+  }));
 }
 
 export default async function ErrandDetailPage({ params }: PageProps<"/errands/[id]">) {
@@ -49,77 +139,27 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
 
   const profileIds = [errand.requester_id];
   if (errand.runner_id) profileIds.push(errand.runner_id);
-  const profilesById = await fetchProfiles(supabase, profileIds);
+
+  // 서로 의존하지 않는 다섯 갈래의 조회를 병렬로 실행해 응답 지연을 줄인다.
+  const [profilesById, applicationsBranch, completionProof, existingReview, inquiries] = await Promise.all([
+    fetchProfiles(supabase, profileIds),
+    fetchApplicationsBranch(supabase, id, errand.status, isRequester, profile.id),
+    fetchCompletionProof(supabase, id, errand.status),
+    fetchExistingReview(supabase, id, errand.status),
+    fetchInquiries(supabase, id),
+  ]);
+
   const requesterProfile = profilesById.get(errand.requester_id) ?? null;
   const runnerProfile = errand.runner_id ? (profilesById.get(errand.runner_id) ?? null) : null;
-
-  let applicationsWithProfiles: ApplicationWithProfile[] = [];
-  let myApplication: Application | null = null;
-
-  if (isRequester && ["RECRUITING", "SELECTING"].includes(errand.status)) {
-    const { data: applications } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("errand_id", id)
-      .eq("status", "APPLIED")
-      .order("created_at", { ascending: true })
-      .returns<Application[]>();
-
-    const applicantProfiles = await fetchProfiles(
-      supabase,
-      (applications ?? []).map((application) => application.applicant_id),
-    );
-    applicationsWithProfiles = (applications ?? []).map((application) => ({
-      ...application,
-      profile: applicantProfiles.get(application.applicant_id) ?? null,
-    }));
-  } else if (!isRequester) {
-    const { data } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("errand_id", id)
-      .eq("applicant_id", profile.id)
-      .maybeSingle<Application>();
-    myApplication = data;
-  }
-
-  let completionProof: CompletionProof | null = null;
-  if (["CONFIRMING", "COMPLETED"].includes(errand.status)) {
-    const { data } = await supabase
-      .from("completion_proofs")
-      .select("*")
-      .eq("errand_id", id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<CompletionProof>();
-    completionProof = data;
-  }
-
-  let existingReview: Review | null = null;
-  if (["CONFIRMING", "COMPLETED"].includes(errand.status)) {
-    const { data } = await supabase.from("reviews").select("*").eq("errand_id", id).maybeSingle<Review>();
-    existingReview = data;
-  }
-
-  const { data: inquiryRows } = await supabase
-    .from("inquiries_feed")
-    .select("*")
-    .eq("errand_id", id)
-    .order("created_at", { ascending: true })
-    .returns<InquiryFeedRow[]>();
-
-  const inquiryAuthorProfiles = await fetchProfiles(
-    supabase,
-    (inquiryRows ?? []).map((inquiry) => inquiry.author_id),
-  );
-  const inquiries: InquiryWithAuthor[] = (inquiryRows ?? []).map((inquiry) => ({
-    ...inquiry,
-    authorNickname: inquiryAuthorProfiles.get(inquiry.author_id)?.nickname ?? null,
-  }));
+  const { applicationsWithProfiles, myApplication } = applicationsBranch;
   const canInquire = !isRequester && errand.status === "RECRUITING";
 
   const canChat = Boolean(
     errand.runner_id && ["MATCHED", "CONFIRMING", "COMPLETED"].includes(errand.status) && (isRequester || isRunner),
+  );
+
+  const hasRouteCoords = Boolean(
+    errand.from_lat !== null && errand.from_lng !== null && errand.to_lat !== null && errand.to_lng !== null,
   );
 
   const isBlinded = errand.moderation_status === "blinded";
@@ -163,6 +203,13 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
           <p className="font-bold text-[#3B5BFD]">{formatPoints(errand.price)}</p>
         </div>
       </section>
+
+      {hasRouteCoords && (
+        <RouteMap
+          from={{ lat: errand.from_lat as number, lng: errand.from_lng as number, label: errand.from_label ?? "출발" }}
+          to={{ lat: errand.to_lat as number, lng: errand.to_lng as number, label: errand.to_label ?? "도착" }}
+        />
+      )}
 
       <section className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm">
         <span className="text-gray-500">
@@ -236,12 +283,17 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
       {!isRequester && !isRunner && errand.status === "RECRUITING" && (
         <section className="flex flex-col gap-2">
           {myApplication ? (
-            <div className="rounded-2xl bg-gray-50 p-4 text-center text-sm text-gray-500">
-              {myApplication.status === "SELECTED"
-                ? "이 의뢰의 수행자로 선택되었어요!"
-                : myApplication.status === "NOT_SELECTED"
-                  ? "아쉽지만 다른 지원자가 선택되었어요."
-                  : "지원 완료! 선택을 기다리고 있어요."}
+            <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 p-4 text-center text-sm text-gray-500">
+              <p>
+                {myApplication.status === "SELECTED"
+                  ? "이 의뢰의 수행자로 선택되었어요!"
+                  : myApplication.status === "NOT_SELECTED"
+                    ? "아쉽지만 다른 지원자가 선택되었어요."
+                    : "지원 완료! 선택을 기다리고 있어요."}
+              </p>
+              {myApplication.status === "APPLIED" && (
+                <ChatEntryButton errandId={errand.id} label="요청자와 채팅하기" />
+              )}
             </div>
           ) : (
             <ApplyButton errandId={errand.id} />

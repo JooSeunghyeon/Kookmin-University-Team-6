@@ -42,7 +42,9 @@ export function ChatThread({ roomId, currentUserId, partnerNickname, errandTitle
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `room_id=eq.${roomId}` },
         (payload) => {
-          setMessages((current) => [...current, payload.new]);
+          setMessages((current) =>
+            current.some((message) => message.id === payload.new.id) ? current : [...current, payload.new],
+          );
           if (payload.new.sender_id !== currentUserId) {
             fetch(`/api/chat/rooms/${roomId}/read`, { method: "POST" });
           }
@@ -54,6 +56,28 @@ export function ChatThread({ roomId, currentUserId, partnerNickname, errandTitle
       supabase.removeChannel(channel);
     };
   }, [roomId, currentUserId, instanceId]);
+
+  // Realtime 소켓이 끊기거나(네트워크 전환, 탭 백그라운드 등) 구독이 실패해도 메시지가
+  // 보이도록 짧은 간격으로 폴링해 어긋난 상태를 보정하는 안전망. 새 메시지가 없으면
+  // 배열을 교체하지 않아 불필요한 리렌더를 피한다.
+  useEffect(() => {
+    const supabase = createClient();
+    const intervalId = setInterval(async () => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("room_id", roomId)
+        .order("created_at", { ascending: true })
+        .returns<ChatMessage[]>();
+      if (!data) return;
+      setMessages((current) => {
+        const hasNewMessage = data.length !== current.length;
+        return hasNewMessage ? data : current;
+      });
+    }, 4000);
+
+    return () => clearInterval(intervalId);
+  }, [roomId]);
 
   async function handleSend() {
     const content = input.trim();

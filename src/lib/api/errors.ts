@@ -29,6 +29,16 @@ const RPC_ERROR_MESSAGES: Record<string, string> = {
   REPORT_NOT_FOUND: "신고 내역을 찾을 수 없어요.",
   UNKNOWN_ACTION: "알 수 없는 처리예요.",
   NICKNAME_COOLDOWN: "닉네임은 30일에 한 번만 바꿀 수 있어요.",
+  FORBIDDEN: "권한이 없어요.",
+  INVALID_LOCATION_TYPE: "위치 방식을 확인해 주세요.",
+  GATHERING_NOT_FOUND: "모임을 찾을 수 없어요.",
+  GATHERING_CLOSED: "모집이 마감된 모임이에요.",
+  ALREADY_JOINED: "이미 참여 중인 모임이에요.",
+  GATHERING_FULL: "정원이 가득 찼어요.",
+  HOST_CANNOT_LEAVE: "모임장은 탈퇴할 수 없어요. 모임을 마감해 주세요.",
+  NOT_MEMBER: "참여 중인 모임이 아니에요.",
+  INVALID_CATEGORY: "카테고리를 확인해 주세요.",
+  INVALID_CAPACITY: "정원은 2명에서 100명 사이여야 해요.",
 };
 
 /** 클라이언트 입력 오류(400) vs 상태/권한 오류(409)를 가르는 코드만 별도로 표시한다. */

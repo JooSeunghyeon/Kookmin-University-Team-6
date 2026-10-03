@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/lib/supabase/types";
 
@@ -45,8 +46,12 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   }, [userId, instanceId]);
 
   return (
-    <Link href="/notifications" className="relative flex h-9 w-9 items-center justify-center text-xl" aria-label="알림">
-      🔔
+    <Link
+      href="/notifications"
+      className="relative flex h-9 w-9 items-center justify-center text-gray-600"
+      aria-label="알림"
+    >
+      <Bell size={21} />
       {unreadCount > 0 && (
         <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F04452] px-1 text-[10px] font-semibold text-white">
           {unreadCount > 99 ? "99+" : unreadCount}

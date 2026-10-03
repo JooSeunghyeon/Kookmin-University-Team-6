@@ -1,18 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ERRAND_CATEGORIES, URGENT_LEVEL_FEE, MIN_ERRAND_PRICE, type ErrandCategory } from "@/lib/constants";
+import { Sparkles, Zap, Wifi } from "lucide-react";
+import {
+  ERRAND_CATEGORIES,
+  URGENT_LEVEL_FEE,
+  MIN_ERRAND_PRICE,
+  LOCATION_TYPES,
+  LOCATION_TYPE_LABEL,
+  type ErrandCategory,
+  type LocationType,
+} from "@/lib/constants";
 import { formatPoints } from "@/lib/utils";
 import { FormField, inputBaseClass, primaryButtonClass } from "@/components/ui/form-field";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { CampusPlaceField, CustomLocationField, EMPTY_LEG, type LegValue } from "@/components/map/place-picker";
 import type { CampusPlace } from "@/lib/supabase/types";
 import type { AiAssistResult } from "@/lib/ai/assist";
+import type { LatLng } from "@/lib/geo";
 import { PaymentConfirmModal } from "./payment-confirm-modal";
 
 interface NewErrandFormProps {
   places: CampusPlace[];
   pointBalance: number;
+  schoolCenter: LatLng;
 }
+
+const ONLINE_LEG: LegValue = { placeId: null, label: "온라인", lat: null, lng: null };
 
 function dateToDatetimeLocalValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -25,7 +40,7 @@ function defaultDesiredAt(): string {
   return dateToDatetimeLocalValue(date);
 }
 
-export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
+export function NewErrandForm({ places, pointBalance, schoolCenter }: NewErrandFormProps) {
   const router = useRouter();
   const [rawInput, setRawInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -35,8 +50,9 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<ErrandCategory>(ERRAND_CATEGORIES[0].value);
-  const [fromPlaceId, setFromPlaceId] = useState("");
-  const [toPlaceId, setToPlaceId] = useState("");
+  const [locationType, setLocationType] = useState<LocationType>("campus");
+  const [fromLeg, setFromLeg] = useState<LegValue>(EMPTY_LEG);
+  const [toLeg, setToLeg] = useState<LegValue>(EMPTY_LEG);
   const [desiredAt, setDesiredAt] = useState(defaultDesiredAt());
   const [price, setPrice] = useState(String(MIN_ERRAND_PRICE));
   const [urgentLevel, setUrgentLevel] = useState<0 | 1 | 2>(0);
@@ -44,8 +60,8 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fromPlace = useMemo(() => places.find((place) => place.id === fromPlaceId), [places, fromPlaceId]);
-  const toPlace = useMemo(() => places.find((place) => place.id === toPlaceId), [places, toPlaceId]);
+  const effectiveFromLeg = locationType === "online" ? ONLINE_LEG : fromLeg;
+  const effectiveToLeg = locationType === "online" ? ONLINE_LEG : toLeg;
 
   async function handleAiAssist() {
     if (rawInput.trim().length < 2) {
@@ -78,8 +94,13 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
 
       const matchedFrom = places.find((place) => place.name === result.fromLabel);
       const matchedTo = places.find((place) => place.name === result.toLabel);
-      if (matchedFrom) setFromPlaceId(matchedFrom.id);
-      if (matchedTo) setToPlaceId(matchedTo.id);
+      if (matchedFrom || matchedTo) setLocationType("campus");
+      if (matchedFrom) {
+        setFromLeg({ placeId: matchedFrom.id, label: matchedFrom.name, lat: matchedFrom.lat, lng: matchedFrom.lng });
+      }
+      if (matchedTo) {
+        setToLeg({ placeId: matchedTo.id, label: matchedTo.name, lat: matchedTo.lat, lng: matchedTo.lng });
+      }
 
       setAiApplied(result);
     } catch {
@@ -96,14 +117,12 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
   const isFormValid =
     title.trim().length >= 2 &&
     body.trim().length >= 5 &&
-    Boolean(fromPlace) &&
-    Boolean(toPlace) &&
+    effectiveFromLeg.label.trim().length >= 1 &&
+    effectiveToLeg.label.trim().length >= 1 &&
     priceNumber >= MIN_ERRAND_PRICE &&
     totalCost <= pointBalance;
 
   async function handleConfirmSubmit() {
-    if (!fromPlace || !toPlace) return;
-
     setIsSubmitting(true);
     setError(null);
 
@@ -115,14 +134,15 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
         body,
         rawInput: rawInput.trim() || undefined,
         category,
-        fromPlaceId: fromPlace.id,
-        fromLat: fromPlace.lat,
-        fromLng: fromPlace.lng,
-        fromLabel: fromPlace.name,
-        toPlaceId: toPlace.id,
-        toLat: toPlace.lat,
-        toLng: toPlace.lng,
-        toLabel: toPlace.name,
+        locationType,
+        fromPlaceId: effectiveFromLeg.placeId,
+        fromLat: effectiveFromLeg.lat,
+        fromLng: effectiveFromLeg.lng,
+        fromLabel: effectiveFromLeg.label,
+        toPlaceId: effectiveToLeg.placeId,
+        toLat: effectiveToLeg.lat,
+        toLng: effectiveToLeg.lng,
+        toLabel: effectiveToLeg.label,
         desiredAt: new Date(desiredAt).toISOString(),
         price: priceNumber,
         aiSuggestedPrice: aiApplied?.suggestedPrice,
@@ -156,19 +176,28 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
         type="button"
         onClick={handleAiAssist}
         disabled={isAiLoading}
-        className="btn-h w-full rounded-xl bg-[#8B5CF6] text-base font-semibold text-white transition disabled:opacity-40"
+        className="btn-h flex w-full items-center justify-center gap-2 rounded-xl bg-[#8B5CF6] text-base font-semibold text-white transition disabled:opacity-40"
       >
-        {isAiLoading ? "AI가 정리하는 중..." : "✦ AI로 정리하기"}
+        <Sparkles size={18} />
+        {isAiLoading ? "AI가 정리하는 중..." : "AI로 정리하기"}
       </button>
       {aiError && <p className="text-xs text-[#F04452]">{aiError}</p>}
       {aiApplied && (
         <div className="rounded-xl bg-[#8B5CF6]/10 px-4 py-3 text-xs text-[#8B5CF6]">
-          <p className="mb-1 font-semibold">✦ AI 추천 결과를 적용했어요</p>
+          <p className="mb-1 flex items-center gap-1 font-semibold">
+            <Sparkles size={14} />
+            AI 추천 결과를 적용했어요
+          </p>
           <p>{aiApplied.reasoning}</p>
           <p>
             추천 범위 {formatPoints(aiApplied.priceRangeMin)} ~ {formatPoints(aiApplied.priceRangeMax)}
           </p>
-          {aiApplied.urgentRecommended && <p className="mt-1 font-semibold text-[#F04452]">⚡ 긴급 옵션을 추천해요</p>}
+          {aiApplied.urgentRecommended && (
+            <p className="mt-1 flex items-center gap-1 font-semibold text-[#F04452]">
+              <Zap size={14} />
+              긴급 옵션을 추천해요
+            </p>
+          )}
         </div>
       )}
 
@@ -211,44 +240,48 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
         </div>
       </FormField>
 
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="출발지">
-          <select
-            className={inputBaseClass}
-            value={fromPlaceId}
-            onChange={(event) => setFromPlaceId(event.target.value)}
-          >
-            <option value="">선택해 주세요</option>
-            {places.map((place) => (
-              <option key={place.id} value={place.id}>
-                {place.name}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField label="도착지">
-          <select
-            className={inputBaseClass}
-            value={toPlaceId}
-            onChange={(event) => setToPlaceId(event.target.value)}
-          >
-            <option value="">선택해 주세요</option>
-            {places.map((place) => (
-              <option key={place.id} value={place.id}>
-                {place.name}
-              </option>
-            ))}
-          </select>
-        </FormField>
-      </div>
+      <FormField label="위치 방식">
+        <div className="flex gap-1.5">
+          {LOCATION_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setLocationType(type)}
+              className={`flex-1 rounded-xl border py-2 text-sm font-semibold transition ${
+                locationType === type
+                  ? "border-[#3B5BFD] bg-[#3B5BFD] text-white"
+                  : "border-gray-200 text-gray-500"
+              }`}
+            >
+              {LOCATION_TYPE_LABEL[type]}
+            </button>
+          ))}
+        </div>
+      </FormField>
+
+      {locationType === "campus" && (
+        <div className="grid grid-cols-2 gap-3">
+          <CampusPlaceField fieldLabel="출발지" places={places} value={fromLeg} onSelect={setFromLeg} />
+          <CampusPlaceField fieldLabel="도착지" places={places} value={toLeg} onSelect={setToLeg} />
+        </div>
+      )}
+
+      {locationType === "custom" && (
+        <div className="flex flex-col gap-3">
+          <CustomLocationField fieldLabel="출발지" schoolCenter={schoolCenter} value={fromLeg} onChange={setFromLeg} />
+          <CustomLocationField fieldLabel="도착지" schoolCenter={schoolCenter} value={toLeg} onChange={setToLeg} />
+        </div>
+      )}
+
+      {locationType === "online" && (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-gray-50 p-4 text-center">
+          <Wifi size={22} className="text-gray-400" />
+          <p className="text-xs text-gray-500">직접 만나지 않는 비대면 의뢰예요. 위치를 입력하지 않아도 돼요.</p>
+        </div>
+      )}
 
       <FormField label="희망 시각">
-        <input
-          type="datetime-local"
-          className={inputBaseClass}
-          value={desiredAt}
-          onChange={(event) => setDesiredAt(event.target.value)}
-        />
+        <DateTimePicker value={desiredAt} onChange={setDesiredAt} />
       </FormField>
 
       <FormField label="사례금 (P)">
@@ -300,14 +333,14 @@ export function NewErrandForm({ places, pointBalance }: NewErrandFormProps) {
         다음
       </button>
 
-      {showConfirm && fromPlace && toPlace && (
+      {showConfirm && (
         <PaymentConfirmModal
           title={title}
           price={priceNumber}
           urgentFee={urgentFee}
           totalCost={totalCost}
-          fromLabel={fromPlace.name}
-          toLabel={toPlace.name}
+          fromLabel={effectiveFromLeg.label}
+          toLabel={effectiveToLeg.label}
           isSubmitting={isSubmitting}
           onCancel={() => setShowConfirm(false)}
           onConfirm={handleConfirmSubmit}

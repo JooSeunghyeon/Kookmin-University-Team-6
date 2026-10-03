@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { User } from "lucide-react";
 import { requireCurrentUser } from "@/lib/auth/current-user";
 import { formatPoints } from "@/lib/utils";
 
@@ -8,7 +9,9 @@ export default async function MyPage() {
   return (
     <main className="flex flex-col gap-5 px-5 pt-6">
       <section className="flex flex-col items-center gap-2 rounded-2xl bg-[#3B5BFD]/5 p-6 text-center">
-        <span className="text-3xl">🙂</span>
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#3B5BFD] shadow-sm">
+          <User size={28} />
+        </span>
         <h1 className="text-lg font-bold text-gray-900">{profile.nickname}</h1>
         <p className="text-sm text-gray-500">
           {profile.department ?? "학과 미입력"} · 완료 {profile.completed_count}회
@@ -24,6 +27,7 @@ export default async function MyPage() {
       <nav className="flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-100">
         <MenuLink href="/me/points" label="포인트 내역" trailing={formatPoints(profile.point_balance)} />
         <MenuLink href="/me/activity" label="내 활동" />
+        <MenuLink href="/gatherings?filter=mine" label="내 모임" />
         <MenuLink href="/me/settings" label="설정" />
       </nav>
     </main>

@@ -4,7 +4,15 @@ import { containsAcademicDishonestyKeyword, containsBannedWord } from "@/lib/mod
 import { maskPersonalInfo } from "@/lib/moderation/pii-mask";
 import { AI_VERDICT } from "@/lib/constants";
 
-export type ModerationTargetType = "errand" | "application" | "inquiry" | "chat_message" | "nickname" | "review";
+export type ModerationTargetType =
+  | "errand"
+  | "application"
+  | "inquiry"
+  | "chat_message"
+  | "nickname"
+  | "review"
+  | "gathering"
+  | "gathering_comment";
 export type ModerationVerdict = (typeof AI_VERDICT)[keyof typeof AI_VERDICT];
 
 export interface ModerationResult {

@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   description:
     "학교 단위 심부름 매칭 서비스 캠퍼스런. 학식 포장, 프린트, 택배 대리 수령까지 같은 학교 학생에게 부탁하세요.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

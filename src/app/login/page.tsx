@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { FormField, inputBaseClass, primaryButtonClass } from "@/components/ui/form-field";
+import { Logo } from "@/components/ui/logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,8 +32,9 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center gap-6 px-5 py-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#3B5BFD]">캠퍼스런</h1>
+      <div className="flex flex-col items-center text-center">
+        <Logo size={72} />
+        <h1 className="mt-2 text-2xl font-bold text-[#3B5BFD]">캠퍼스런</h1>
         <p className="mt-1 text-sm text-gray-500">우리 학교 학생이 대신 해드려요</p>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Shuffle } from "lucide-react";
 import { generateRandomNickname } from "@/lib/nickname";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -85,7 +86,7 @@ export function StepNickname({ form, onChange, onBack }: StepNicknameProps) {
       <div>
         <h1 className="text-xl font-bold">닉네임을 정해 주세요</h1>
         <p className="mt-1 text-sm text-gray-500">
-          실명 대신 이 닉네임으로 다른 학생에게 보여져요. 🎲를 눌러 새로 뽑을 수 있어요.
+          실명 대신 이 닉네임으로 다른 학생에게 보여져요. 주사위를 눌러 새로 뽑을 수 있어요.
         </p>
       </div>
 
@@ -100,10 +101,10 @@ export function StepNickname({ form, onChange, onBack }: StepNicknameProps) {
           <button
             type="button"
             onClick={rollNickname}
-            className="btn-h aspect-square rounded-xl border border-gray-200 text-xl"
+            className="btn-h flex aspect-square items-center justify-center rounded-xl border border-gray-200 text-gray-600"
             aria-label="닉네임 다시 뽑기"
           >
-            🎲
+            <Shuffle size={20} />
           </button>
         </div>
       </FormField>

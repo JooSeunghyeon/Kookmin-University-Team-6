@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ERRAND_CATEGORIES } from "@/lib/constants";
+import { ERRAND_CATEGORIES, LOCATION_TYPES } from "@/lib/constants";
 
 const CATEGORY_VALUES = ERRAND_CATEGORIES.map((category) => category.value) as [string, ...string[]];
 
@@ -8,14 +8,15 @@ export const createErrandSchema = z.object({
   body: z.string().min(5, "내용을 5자 이상 입력해 주세요.").max(1000),
   rawInput: z.string().max(1000).optional(),
   category: z.enum(CATEGORY_VALUES),
+  locationType: z.enum(LOCATION_TYPES).default("campus"),
   fromPlaceId: z.string().uuid().nullable().optional(),
-  fromLat: z.number(),
-  fromLng: z.number(),
+  fromLat: z.number().nullable().optional(),
+  fromLng: z.number().nullable().optional(),
   fromLabel: z.string().min(1, "출발지를 선택해 주세요."),
   fromDetail: z.string().max(200).optional(),
   toPlaceId: z.string().uuid().nullable().optional(),
-  toLat: z.number(),
-  toLng: z.number(),
+  toLat: z.number().nullable().optional(),
+  toLng: z.number().nullable().optional(),
   toLabel: z.string().min(1, "도착지를 선택해 주세요."),
   toDetail: z.string().max(200).optional(),
   desiredAt: z.string().min(1, "희망 시각을 선택해 주세요."),
@@ -23,7 +24,13 @@ export const createErrandSchema = z.object({
   aiSuggestedPrice: z.number().int().optional(),
   urgentLevel: z.union([z.literal(0), z.literal(1), z.literal(2)]).default(0),
   imageUrl: z.string().url().optional(),
-});
+}).refine(
+  (input) =>
+    input.locationType !== "campus" ||
+    (input.fromLat !== null && input.fromLat !== undefined && input.fromLng !== null && input.fromLng !== undefined &&
+      input.toLat !== null && input.toLat !== undefined && input.toLng !== null && input.toLng !== undefined),
+  { message: "캠퍼스 장소를 선택하면 좌표가 필요해요." },
+);
 
 export type CreateErrandInput = z.infer<typeof createErrandSchema>;
 

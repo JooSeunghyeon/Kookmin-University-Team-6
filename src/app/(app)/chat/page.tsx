@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/auth/current-user";
 import { formatKoreanDateTime } from "@/lib/time";
+import { ChatListLive } from "@/components/chat/chat-list-live";
 import type { ChatRoom, Errand, PublicProfile } from "@/lib/supabase/types";
 
 export default async function ChatListPage() {
@@ -35,6 +36,7 @@ export default async function ChatListPage() {
 
   return (
     <main className="flex flex-col gap-3 px-5 pt-6">
+      <ChatListLive userId={profile.id} />
       <h1 className="text-xl font-bold text-gray-900">채팅</h1>
 
       {roomList.length === 0 && (

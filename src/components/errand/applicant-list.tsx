@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChatEntryButton } from "./chat-entry-button";
 import type { Application, PublicProfile } from "@/lib/supabase/types";
 
 export interface ApplicationWithProfile extends Application {
@@ -66,14 +67,22 @@ export function ApplicantList({
               <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">{application.message}</p>
             )}
           </div>
-          <button
-            type="button"
-            className="h-9 shrink-0 rounded-lg bg-[#3B5BFD] px-3 text-sm font-semibold text-white disabled:opacity-40"
-            onClick={() => selectApplicant(application.id)}
-            disabled={pendingId !== null}
-          >
-            {pendingId === application.id ? "선택 중..." : "선택"}
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ChatEntryButton
+              errandId={errandId}
+              partnerId={application.applicant_id}
+              label="채팅"
+              variant="compact"
+            />
+            <button
+              type="button"
+              className="h-9 shrink-0 rounded-lg bg-[#3B5BFD] px-3 text-sm font-semibold text-white disabled:opacity-40"
+              onClick={() => selectApplicant(application.id)}
+              disabled={pendingId !== null}
+            >
+              {pendingId === application.id ? "선택 중..." : "선택"}
+            </button>
+          </div>
         </div>
       ))}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Lock } from "lucide-react";
 import { formatKoreanDateTime } from "@/lib/time";
 import { inputBaseClass, primaryButtonClass } from "@/components/ui/form-field";
 import type { InquiryFeedRow } from "@/lib/supabase/types";
@@ -39,8 +40,8 @@ function InquiryRow({ inquiry, isRequester }: { inquiry: InquiryWithAuthor; isRe
   return (
     <div className="rounded-xl border border-gray-100 p-3 text-sm">
       <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>
-          {inquiry.is_secret && "🔒 "}
+        <span className="flex items-center gap-1">
+          {inquiry.is_secret && <Lock size={12} />}
           {inquiry.authorNickname ?? "익명"}
         </span>
         <span>{formatKoreanDateTime(inquiry.created_at)}</span>

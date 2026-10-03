@@ -19,6 +19,37 @@ export const URGENT_EXPIRE_REFUND_RATE = 0.5;
 export const WALK_METERS_PER_MINUTE = 67;
 export const CAMPUS_RADIUS_METERS = 2000;
 
+export const LOCATION_TYPES = ["campus", "custom", "online"] as const;
+export type LocationType = (typeof LOCATION_TYPES)[number];
+
+export const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
+  campus: "캠퍼스 장소",
+  custom: "직접 입력",
+  online: "온라인(비대면)",
+};
+
+export const GATHERING_CATEGORIES = [
+  { value: "study", label: "스터디" },
+  { value: "sports", label: "운동" },
+  { value: "hobby", label: "취미" },
+  { value: "etc", label: "기타" },
+] as const;
+
+export type GatheringCategoryValue = (typeof GATHERING_CATEGORIES)[number]["value"];
+
+export const GATHERING_STATUS_LABEL: Record<string, string> = {
+  OPEN: "모집 중",
+  CLOSED: "모집 마감",
+  CANCELLED: "취소됨",
+};
+
+export const MIN_GATHERING_CAPACITY = 2;
+export const MAX_GATHERING_CAPACITY = 100;
+
+export function gatheringCategoryLabel(value: string): string {
+  return GATHERING_CATEGORIES.find((category) => category.value === value)?.label ?? value;
+}
+
 export const NICKNAME_CHANGE_COOLDOWN_DAYS = 30;
 
 export const ERRAND_CATEGORIES = [

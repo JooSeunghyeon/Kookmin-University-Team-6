@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { REVIEW_TAGS } from "@/lib/constants";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form-field";
+import { StarRating } from "@/components/ui/star-rating";
 import type { Review } from "@/lib/supabase/types";
 
 interface ConfirmReviewPanelProps {
@@ -58,10 +59,9 @@ export function ConfirmReviewPanel({ errandId, status, existingReview }: Confirm
     return (
       <div className="rounded-2xl border border-gray-100 p-4">
         <h3 className="text-sm font-bold text-gray-900">내가 남긴 후기</h3>
-        <p className="mt-1 text-amber-500">
-          {"★".repeat(existingReview.rating)}
-          {"☆".repeat(5 - existingReview.rating)}
-        </p>
+        <div className="mt-1">
+          <StarRating rating={existingReview.rating} size={18} />
+        </div>
         {existingReview.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {existingReview.tags.map((tag) => (
@@ -82,13 +82,7 @@ export function ConfirmReviewPanel({ errandId, status, existingReview }: Confirm
         {status === "CONFIRMING" ? "완료를 확인해 주세요" : "후기를 남겨 주세요"}
       </h3>
 
-      <div className="flex gap-1 text-2xl text-amber-400">
-        {[1, 2, 3, 4, 5].map((value) => (
-          <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value}점`}>
-            {value <= rating ? "★" : "☆"}
-          </button>
-        ))}
-      </div>
+      <StarRating rating={rating} onRate={setRating} size={28} />
 
       <div className="flex flex-wrap gap-1.5">
         {REVIEW_TAGS.map((tag) => (
