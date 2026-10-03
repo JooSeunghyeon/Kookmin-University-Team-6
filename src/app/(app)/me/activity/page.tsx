@@ -27,9 +27,12 @@ export default async function ActivityPage({ searchParams }: PageProps<"/me/acti
       .returns<Errand[]>();
     errands.push(...(data ?? []));
   } else {
+    // applications -> errands 사이에는 FK가 두 개 있다(applications.errand_id,
+    // errands.selected_application_id). 명시적으로 지정하지 않으면 PostgREST가
+    // 어떤 관계를 쓸지 못 정해 PGRST201 에러를 내고 조용히 빈 배열을 반환한다.
     const { data } = await supabase
       .from("applications")
-      .select("*, errand:errands(*)")
+      .select("*, errand:errands!applications_errand_id_fkey(*)")
       .eq("applicant_id", profile.id)
       .order("created_at", { ascending: false })
       .returns<ApplicationWithErrand[]>();
