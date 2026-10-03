@@ -12,10 +12,13 @@ import { CompletionReportForm } from "@/components/errand/completion-report-form
 import { ConfirmReviewPanel } from "@/components/errand/confirm-review-panel";
 import { UrgentUpgradeButtons } from "@/components/errand/urgent-upgrade-buttons";
 import { CancelErrandButton } from "@/components/errand/cancel-errand-button";
+import { ChatEntryButton } from "@/components/errand/chat-entry-button";
+import { InquirySection, type InquiryWithAuthor } from "@/components/errand/inquiry-section";
 import type {
   Application,
   CompletionProof,
   Errand,
+  InquiryFeedRow,
   PublicProfile,
   Review,
 } from "@/lib/supabase/types";
@@ -98,6 +101,27 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
     existingReview = data;
   }
 
+  const { data: inquiryRows } = await supabase
+    .from("inquiries_feed")
+    .select("*")
+    .eq("errand_id", id)
+    .order("created_at", { ascending: true })
+    .returns<InquiryFeedRow[]>();
+
+  const inquiryAuthorProfiles = await fetchProfiles(
+    supabase,
+    (inquiryRows ?? []).map((inquiry) => inquiry.author_id),
+  );
+  const inquiries: InquiryWithAuthor[] = (inquiryRows ?? []).map((inquiry) => ({
+    ...inquiry,
+    authorNickname: inquiryAuthorProfiles.get(inquiry.author_id)?.nickname ?? null,
+  }));
+  const canInquire = !isRequester && errand.status === "RECRUITING";
+
+  const canChat = Boolean(
+    errand.runner_id && ["MATCHED", "CONFIRMING", "COMPLETED"].includes(errand.status) && (isRequester || isRunner),
+  );
+
   const isBlinded = errand.moderation_status === "blinded";
   const canSeeBlindedBanner = isBlinded && (isRequester || profile.role === "admin");
 
@@ -155,6 +179,8 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
           </p>
         </section>
       )}
+
+      {canChat && <ChatEntryButton errandId={errand.id} />}
 
       {completionProof && (
         <section className="rounded-2xl border border-gray-100 p-4 text-sm">
@@ -222,6 +248,8 @@ export default async function ErrandDetailPage({ params }: PageProps<"/errands/[
           )}
         </section>
       )}
+
+      <InquirySection errandId={errand.id} isRequester={isRequester} canInquire={canInquire} inquiries={inquiries} />
     </main>
   );
 }

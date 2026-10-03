@@ -175,6 +175,20 @@ export interface Inquiry {
   created_at: string;
 }
 
+/** inquiries_feed 뷰: 비밀 문의는 제3자에게 content가 null로 내려온다. */
+export interface InquiryFeedRow {
+  id: string;
+  school_id: string;
+  errand_id: string;
+  author_id: string;
+  is_secret: boolean;
+  content: string | null;
+  answer: string | null;
+  answered_at: string | null;
+  moderation_status: string;
+  created_at: string;
+}
+
 export interface ChatRoom {
   id: string;
   school_id: string;

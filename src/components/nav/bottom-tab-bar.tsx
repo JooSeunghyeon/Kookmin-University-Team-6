@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/nav/notification-bell";
 
 interface TabItem {
   href: string;
@@ -66,14 +67,17 @@ function TabLink({ tab, active }: { tab: TabItem; active: boolean }) {
   );
 }
 
-export function SidebarNav({ canWrite }: { canWrite: boolean }) {
+export function SidebarNav({ canWrite, userId }: { canWrite: boolean; userId: string }) {
   const pathname = usePathname();
 
   return (
     <nav className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col gap-1 border-r border-gray-100 bg-white px-4 py-8 md:flex">
-      <Link href="/" className="mb-8 px-2 text-xl font-bold text-[#3B5BFD]">
-        캠퍼스런
-      </Link>
+      <div className="mb-8 flex items-center justify-between px-2">
+        <Link href="/" className="text-xl font-bold text-[#3B5BFD]">
+          캠퍼스런
+        </Link>
+        <NotificationBell userId={userId} />
+      </div>
       {TABS.map((tab) => (
         <Link
           key={tab.href}
