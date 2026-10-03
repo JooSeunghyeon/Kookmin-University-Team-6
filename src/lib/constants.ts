@@ -133,3 +133,18 @@ export const SCHOOL_SEED = [
 
 export const CLAUDE_TIMEOUT_MS = 8000;
 export const CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
+
+export const POINT_TRANSACTION_LABEL: Record<string, string> = {
+  CHARGE: "충전",
+  ESCROW_HOLD: "의뢰 등록(보관)",
+  PAYOUT: "수행 보상",
+  REFUND: "환불",
+  FEE: "수수료",
+  URGENT_FEE: "긴급 옵션",
+  URGENT_REFUND: "긴급 옵션 환급",
+  WITHDRAW: "출금",
+};
+
+export function categoryLabel(value: string): string {
+  return ERRAND_CATEGORIES.find((category) => category.value === value)?.label ?? value;
+}

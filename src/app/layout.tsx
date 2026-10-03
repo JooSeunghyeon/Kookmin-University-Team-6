@@ -11,10 +11,6 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "캠퍼스런",
   },
-  icons: {
-    icon: "/icon-192.png",
-    apple: "/apple-touch-icon.png",
-  },
 };
 
 export const viewport: Viewport = {
