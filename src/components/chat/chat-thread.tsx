@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatKoreanDateTime } from "@/lib/time";
@@ -21,6 +21,9 @@ export function ChatThread({ roomId, currentUserId, partnerNickname, errandTitle
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // 같은 roomId로 채널을 두 번 구독하면(예: 빠른 재마운트) realtime-js가 캐시된 채널에
+  // on()을 호출해 에러가 나므로, 마운트마다 고유한 채널 이름을 사용한다.
+  const instanceId = useId();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,7 +37,7 @@ export function ChatThread({ roomId, currentUserId, partnerNickname, errandTitle
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel(`chat_room_${roomId}`)
+      .channel(`chat_room_${roomId}_${instanceId}`)
       .on<ChatMessage>(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `room_id=eq.${roomId}` },
@@ -50,7 +53,7 @@ export function ChatThread({ roomId, currentUserId, partnerNickname, errandTitle
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomId, currentUserId]);
+  }, [roomId, currentUserId, instanceId]);
 
   async function handleSend() {
     const content = input.trim();

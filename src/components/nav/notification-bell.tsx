@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/lib/supabase/types";
@@ -11,6 +11,10 @@ interface NotificationBellProps {
 
 export function NotificationBell({ userId }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
+  // 데스크톱 사이드바와 모바일 상단바가 동시에 마운트되므로(CSS로만 숨김),
+  // 같은 이름의 채널을 두 번 구독하면 realtime-js가 캐시된 채널에 on()을 호출해 에러가 난다.
+  // 인스턴스마다 고유한 채널 이름을 써서 충돌을 피한다.
+  const instanceId = useId();
 
   useEffect(() => {
     const supabase = createClient();
@@ -27,7 +31,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     fetchUnreadCount();
 
     const channel = supabase
-      .channel(`notifications_${userId}`)
+      .channel(`notifications_${userId}_${instanceId}`)
       .on<Notification>(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
@@ -38,7 +42,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, instanceId]);
 
   return (
     <Link href="/notifications" className="relative flex h-9 w-9 items-center justify-center text-xl" aria-label="알림">
